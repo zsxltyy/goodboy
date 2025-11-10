@@ -1,7 +1,6 @@
 -- ======================================================
--- GOODBOY: ServerHop (pont beférsz) + GUI + Jump/AutoFloor/ESP (név fejük fölött)
+-- McDonald’s: Infinite Jump + AutoFloor/ESP + ServerHop
 -- ======================================================
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,23 +12,23 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Prevent double load
-if _G.GOODBOY_LOADED then
-    warn("[GOODBOY] Már fut egy példány. Kilépés.")
+if _G.MCDONALDS_LOADED then
+    warn("[McDonald’s] Már fut egy példány. Kilépés.")
     return
 end
-_G.GOODBOY_LOADED = true
+_G.MCDONALDS_LOADED = true
 
 -- Clean old GUI
 pcall(function()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
-        local old = pg:FindFirstChild("GOODBOY_GUI")
+        local old = pg:FindFirstChild("MCDONALDS_GUI")
         if old then old:Destroy() end
     end
 end)
 
 -- Toggles
-local toggles = { jump = false, autoFloor = false, esp = false }
+local toggles = { infiniteJump = false, autoFloor = false, esp = false }
 
 -- Globals
 local currentRoot, currentHumanoid, activeBlock = nil, nil, nil
@@ -38,13 +37,17 @@ local espObjects = {}
 local PLATFORM_SIZE = Vector3.new(6,0.2,6)
 local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
 
+-- Save WalkSpeed & JumpPower for new spawns
+local walkSpeedValue = 16
+local jumpPowerValue = 50
+local gravityValue = workspace.Gravity
+
 -- ======================================================
--- ServerHop: keres olyan szervert, ahol pont beférsz (playing == maxPlayers - 1)
+-- ServerHop
 -- ======================================================
 local function serverHop()
-    print("[GOODBOY] Precise ServerHop indítva...")
+    print("[McDonald’s] Precise ServerHop indítva...")
     local PlaceId, JobId = tostring(game.PlaceId), tostring(game.JobId)
-
     local function fetchPage(cursor)
         local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
         if cursor then url = url .. "&cursor=" .. HttpService:UrlEncode(cursor) end
@@ -57,7 +60,7 @@ local function serverHop()
 
     local candidates = {}
     local cursor = nil
-    for page = 1, 5 do -- több oldalt is átnéz
+    for page = 1, 5 do
         local data = fetchPage(cursor)
         if not data then break end
         for _, srv in ipairs(data.data) do
@@ -73,14 +76,11 @@ local function serverHop()
         if not cursor then break end
         task.wait(0.05)
     end
-
     if #candidates == 0 then
-        warn("[GOODBOY] Nem találtam majdnem full szervert. Fallback teleport...")
+        warn("[McDonald’s] Nem találtam majdnem full szervert. Fallback teleport...")
         pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
         return
     end
-
-    -- random választás a megfelelő szerverek közül
     local target = candidates[math.random(1, #candidates)]
     pcall(function()
         TeleportService:TeleportToPlaceInstance(tonumber(PlaceId), target, LocalPlayer)
@@ -91,36 +91,46 @@ end
 -- GUI
 -- ======================================================
 local function createGui()
-    pcall(function()
-        local pg = LocalPlayer:FindFirstChild("PlayerGui")
-        if pg then
-            local old = pg:FindFirstChild("GOODBOY_GUI")
-            if old then old:Destroy() end
-        end
-    end)
+    local pg = LocalPlayer:WaitForChild("PlayerGui")
 
+    -- ScreenGui
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "GOODBOY_GUI"
+    screenGui.Name = "MCDONALDS_GUI"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.Parent = pg
 
+    -- Small red dot
+    local smallBtn = Instance.new("TextButton", screenGui)
+    smallBtn.Size = UDim2.new(0, 40, 0, 40)
+    smallBtn.Position = UDim2.new(0, 10, 0, 100)
+    smallBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    smallBtn.Text = ""
+    smallBtn.BorderSizePixel = 0
+    smallBtn.AutoButtonColor = true
+    smallBtn.ZIndex = 10
+    Instance.new("UICorner", smallBtn).CornerRadius = UDim.new(0, 20)
+    smallBtn.Draggable = true
+
+    -- Main Frame
     local mainFrame = Instance.new("Frame", screenGui)
-    mainFrame.Size = UDim2.new(0, 260, 0, 340)
-    mainFrame.Position = UDim2.new(0, 30, 0.5, -170)
+    mainFrame.Size = UDim2.new(0, 260, 0, 400)
+    mainFrame.Position = UDim2.new(0, 50, 0.5, -200)
     mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
+    mainFrame.Visible = false
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 14)
 
     local title = Instance.new("TextLabel", mainFrame)
     title.Size = UDim2.new(1,0,0,60)
-    title.Text = "GOODBOY"
+    title.Text = "McDonald’s"
     title.TextColor3 = Color3.fromRGB(0, 200, 255)
     title.Font = Enum.Font.GothamBold
     title.TextScaled = true
 
+    -- Function to create buttons
     local function makeButton(text, y, key, callback)
         local btn = Instance.new("TextButton", mainFrame)
         btn.Size = UDim2.new(1,-40,0,50)
@@ -131,29 +141,27 @@ local function createGui()
         btn.Text = text
         btn.TextScaled = true
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
-
-        if key and toggles[key] then
-            btn.BackgroundColor3 = Color3.fromRGB(0,170,90)
-        end
-
+        if key and toggles[key] then btn.BackgroundColor3 = Color3.fromRGB(0,170,90) end
         btn.MouseButton1Click:Connect(function()
             if key then
                 toggles[key] = not toggles[key]
-                TweenService:Create(btn, TweenInfo.new(0.3), {
-                    BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50)
-                }):Play()
+                TweenService:Create(btn, TweenInfo.new(0.3), { BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50) }):Play()
             elseif callback then
                 callback()
             end
         end)
-
         return btn
     end
 
-    makeButton("Jump Boost", 70, "jump")
+    makeButton("Infinite Jump", 70, "infiniteJump")
     makeButton("Auto Floor", 140, "autoFloor")
     makeButton("ESP Players", 210, "esp")
     makeButton("Server Hop", 280, nil, serverHop)
+
+    -- Toggle logic small red button
+    smallBtn.MouseButton1Click:Connect(function()
+        mainFrame.Visible = not mainFrame.Visible
+    end)
 end
 
 createGui()
@@ -164,8 +172,19 @@ createGui()
 local function onCharacterAdded(char)
     currentHumanoid = char:WaitForChild("Humanoid")
     currentRoot = char:WaitForChild("HumanoidRootPart")
-    if activeBlock then pcall(function() activeBlock:Destroy() end) activeBlock = nil end
+
+    -- Apply saved values
+    if currentHumanoid then
+        currentHumanoid.WalkSpeed = walkSpeedValue
+        currentHumanoid.JumpPower = jumpPowerValue
+    end
+
+    if activeBlock then
+        pcall(function() activeBlock:Destroy() end)
+        activeBlock = nil
+    end
 end
+
 if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
@@ -173,12 +192,13 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = true end
 end)
+
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = false end
 end)
 
 -- ======================================================
--- ESP Logic (név fejük fölött)
+-- ESP Logic
 -- ======================================================
 local function clearESP()
     for _, stuff in pairs(espObjects) do
@@ -224,10 +244,8 @@ end
 -- Update Loop
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    if toggles.jump and jumpPressed and currentHumanoid and currentRoot then
-        if currentHumanoid.FloorMaterial ~= Enum.Material.Air then
-            currentRoot.Velocity = Vector3.new(currentRoot.Velocity.X, 85, currentRoot.Velocity.Z)
-        end
+    if toggles.infiniteJump and jumpPressed and currentHumanoid and currentRoot then
+        currentRoot.Velocity = Vector3.new(currentRoot.Velocity.X, 50, currentRoot.Velocity.Z)
     end
 
     if toggles.autoFloor and currentRoot then
@@ -249,10 +267,15 @@ RunService.RenderStepped:Connect(function()
         activeBlock = nil
     end
 
-    if toggles.esp then applyESP() else clearESP() end
+    if toggles.esp then
+        applyESP()
+    else
+        clearESP()
+    end
 end)
 
-print("[GOODBOY] Loaded: Jump, AutoFloor, ESP with names, Precise ServerHop")
+print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop")
+
 
 
 
