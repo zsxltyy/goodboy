@@ -1,6 +1,8 @@
 -- ======================================================
--- McDonald’s: Infinite Jump + AutoFloor/ESP + ServerHop
+-- 🍔 McDonald’s Script by zsxltyy
+-- Infinite Jump + Auto Floor + ESP + ServerHop + Auto Reload
 -- ======================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +13,21 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- 🌐 Link, ahonnan a script betölti magát
+local SCRIPT_URL = "https://raw.githubusercontent.com/zsxltyy/goodboy/main/mc.lua"
+
+-- ======================================================
+-- Auto Reload (újraindul, ha szervert váltasz)
+-- ======================================================
+local teleportData = TeleportService:GetLocalPlayerTeleportData()
+if teleportData and teleportData.McDonaldsAutoReload then
+    loadstring(game:HttpGet(teleportData.McDonaldsAutoReload))()
+    return
+end
+
+-- ======================================================
 -- Prevent double load
+-- ======================================================
 if _G.MCDONALDS_LOADED then
     warn("[McDonald’s] Már fut egy példány. Kilépés.")
     return
@@ -27,27 +43,25 @@ pcall(function()
     end
 end)
 
--- Toggles
+-- ======================================================
+-- Állapotváltozók
+-- ======================================================
 local toggles = { infiniteJump = false, autoFloor = false, esp = false }
-
--- Globals
 local currentRoot, currentHumanoid, activeBlock = nil, nil, nil
 local jumpPressed = false
 local espObjects = {}
 local PLATFORM_SIZE = Vector3.new(6,0.2,6)
-local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
-
--- Save WalkSpeed & JumpPower for new spawns
+local PLATFORM_COLOR = Color3.fromRGB(255, 220, 120)
 local walkSpeedValue = 16
 local jumpPowerValue = 50
-local gravityValue = workspace.Gravity
 
 -- ======================================================
--- ServerHop
+-- SERVERHOP (új szerverre lép, és újraindítja a scriptet)
 -- ======================================================
 local function serverHop()
-    print("[McDonald’s] Precise ServerHop indítva...")
+    print("[McDonald’s] 🍟 ServerHop indítva...")
     local PlaceId, JobId = tostring(game.PlaceId), tostring(game.JobId)
+
     local function fetchPage(cursor)
         local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
         if cursor then url = url .. "&cursor=" .. HttpService:UrlEncode(cursor) end
@@ -76,11 +90,17 @@ local function serverHop()
         if not cursor then break end
         task.wait(0.05)
     end
+
+    TeleportService:SetTeleportData({
+        McDonaldsAutoReload = SCRIPT_URL
+    })
+
     if #candidates == 0 then
-        warn("[McDonald’s] Nem találtam majdnem full szervert. Fallback teleport...")
+        warn("[McDonald’s] ⚠️ Nem találtam majdnem tele szervert. Fallback teleport...")
         pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
         return
     end
+
     local target = candidates[math.random(1, #candidates)]
     pcall(function()
         TeleportService:TeleportToPlaceInstance(tonumber(PlaceId), target, LocalPlayer)
@@ -88,35 +108,33 @@ local function serverHop()
 end
 
 -- ======================================================
--- GUI
+-- GUI létrehozása (emojikkal 🎨)
 -- ======================================================
 local function createGui()
     local pg = LocalPlayer:WaitForChild("PlayerGui")
 
-    -- ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MCDONALDS_GUI"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.Parent = pg
 
-    -- Small red dot
+    -- Kis piros gomb 🍔
     local smallBtn = Instance.new("TextButton", screenGui)
     smallBtn.Size = UDim2.new(0, 40, 0, 40)
     smallBtn.Position = UDim2.new(0, 10, 0, 100)
     smallBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    smallBtn.Text = ""
+    smallBtn.Text = "🍔"
+    smallBtn.TextScaled = true
     smallBtn.BorderSizePixel = 0
-    smallBtn.AutoButtonColor = true
     smallBtn.ZIndex = 10
     Instance.new("UICorner", smallBtn).CornerRadius = UDim.new(0, 20)
     smallBtn.Draggable = true
 
-    -- Main Frame
     local mainFrame = Instance.new("Frame", screenGui)
     mainFrame.Size = UDim2.new(0, 260, 0, 400)
-    mainFrame.Position = UDim2.new(0, 50, 0.5, -200)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    mainFrame.Position = UDim2.new(0, 60, 0.5, -200)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
@@ -125,27 +143,31 @@ local function createGui()
 
     local title = Instance.new("TextLabel", mainFrame)
     title.Size = UDim2.new(1,0,0,60)
-    title.Text = "McDonald’s"
-    title.TextColor3 = Color3.fromRGB(0, 200, 255)
+    title.Text = "🍟 McDonald’s Menu 🍔"
+    title.TextColor3 = Color3.fromRGB(255, 200, 0)
     title.Font = Enum.Font.GothamBold
     title.TextScaled = true
+    title.BackgroundTransparency = 1
 
-    -- Function to create buttons
+    -- Gombkészítő funkció
     local function makeButton(text, y, key, callback)
         local btn = Instance.new("TextButton", mainFrame)
-        btn.Size = UDim2.new(1,-40,0,50)
-        btn.Position = UDim2.new(0,20,0,y)
-        btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+        btn.Size = UDim2.new(1, -40, 0, 50)
+        btn.Position = UDim2.new(0, 20, 0, y)
+        btn.BackgroundColor3 = Color3.fromRGB(45,45,55)
         btn.TextColor3 = Color3.new(1,1,1)
         btn.Font = Enum.Font.GothamBold
         btn.Text = text
         btn.TextScaled = true
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         if key and toggles[key] then btn.BackgroundColor3 = Color3.fromRGB(0,170,90) end
+
         btn.MouseButton1Click:Connect(function()
             if key then
                 toggles[key] = not toggles[key]
-                TweenService:Create(btn, TweenInfo.new(0.3), { BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50) }):Play()
+                TweenService:Create(btn, TweenInfo.new(0.3),
+                    { BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90)
+                    or Color3.fromRGB(45,45,55) }):Play()
             elseif callback then
                 callback()
             end
@@ -153,38 +175,29 @@ local function createGui()
         return btn
     end
 
-    makeButton("Infinite Jump", 70, "infiniteJump")
-    makeButton("Auto Floor", 140, "autoFloor")
-    makeButton("ESP Players", 210, "esp")
-    makeButton("Server Hop", 280, nil, serverHop)
+    makeButton("🦘 Infinite Jump", 70, "infiniteJump")
+    makeButton("🧱 Auto Floor", 140, "autoFloor")
+    makeButton("🧍‍♂️ ESP Players", 210, "esp")
+    makeButton("🌐 Server Hop", 280, nil, serverHop)
 
-    -- Toggle logic small red button
     smallBtn.MouseButton1Click:Connect(function()
         mainFrame.Visible = not mainFrame.Visible
     end)
 end
-
 createGui()
 
 -- ======================================================
--- Character Logic
+-- Karakter logika
 -- ======================================================
 local function onCharacterAdded(char)
     currentHumanoid = char:WaitForChild("Humanoid")
     currentRoot = char:WaitForChild("HumanoidRootPart")
-
-    -- Apply saved values
     if currentHumanoid then
         currentHumanoid.WalkSpeed = walkSpeedValue
         currentHumanoid.JumpPower = jumpPowerValue
     end
-
-    if activeBlock then
-        pcall(function() activeBlock:Destroy() end)
-        activeBlock = nil
-    end
+    if activeBlock then pcall(function() activeBlock:Destroy() end) activeBlock = nil end
 end
-
 if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
@@ -192,13 +205,12 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = true end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = false end
 end)
 
 -- ======================================================
--- ESP Logic
+-- ESP rendszer
 -- ======================================================
 local function clearESP()
     for _, stuff in pairs(espObjects) do
@@ -230,7 +242,7 @@ local function applyESP()
             local label = Instance.new("TextLabel", billboard)
             label.Size = UDim2.new(1,0,1,0)
             label.BackgroundTransparency = 1
-            label.Text = player.Name
+            label.Text = "👀 " .. player.Name
             label.TextColor3 = Color3.new(1,1,1)
             label.Font = Enum.Font.GothamBold
             label.TextScaled = true
@@ -274,10 +286,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop")
-
-
-
-
-
-
+print("[McDonald’s 🍔] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop + AutoReload")
