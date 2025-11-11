@@ -1,6 +1,7 @@
 -- ======================================================
--- McDonald’s: Infinite Jump + AutoFloor/ESP + ServerHop + Discord Banner (PERMANENT)
+-- NebulaHub: Infinite Jump + AutoFloor + ServerHop + ESP
 -- ======================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,40 +13,11 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Prevent double load
-if _G.MCDONALDS_LOADED then
-    warn("[McDonald’s] Már fut egy példány. Kilépés.")
+if _G.NEBULAHUB_LOADED then
+    warn("[NebulaHub] Már fut egy példány. Kilépés.")
     return
 end
-_G.MCDONALDS_LOADED = true
-
--- ======================================================
--- 💬 Discord Banner a képernyő tetejére (ÁLLANDÓ)
--- ======================================================
-pcall(function()
-    local pg = LocalPlayer:WaitForChild("PlayerGui")
-
-    local banner = Instance.new("ScreenGui")
-    banner.Name = "DiscordBanner"
-    banner.IgnoreGuiInset = true
-    banner.ResetOnSpawn = false
-    banner.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    banner.Parent = pg
-
-    local text = Instance.new("TextLabel", banner)
-    text.Size = UDim2.new(1, 0, 0, 60)
-    text.Position = UDim2.new(0, 0, 0, 0)
-    text.BackgroundTransparency = 0.3
-    text.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    text.Text = "discord.gg/HRbdkSnzHe"
-    text.TextColor3 = Color3.fromRGB(0, 255, 255)
-    text.Font = Enum.Font.GothamBold
-    text.TextScaled = true
-    text.TextStrokeTransparency = 0.3
-    text.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    text.ZIndex = 9999
-
-    Instance.new("UICorner", text).CornerRadius = UDim.new(0, 10)
-end)
+_G.NEBULAHUB_LOADED = true
 
 -- ======================================================
 -- GUI törlés, globális beállítások
@@ -53,7 +25,7 @@ end)
 pcall(function()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
-        local old = pg:FindFirstChild("MCDONALDS_GUI")
+        local old = pg:FindFirstChild("NebulaHub_GUI")
         if old then old:Destroy() end
     end
 end)
@@ -72,7 +44,7 @@ local gravityValue = workspace.Gravity
 -- ServerHop
 -- ======================================================
 local function serverHop()
-    print("[McDonald’s] Precise ServerHop indítva...")
+    print("[NebulaHub] Precise ServerHop indítva...")
     local PlaceId, JobId = tostring(game.PlaceId), tostring(game.JobId)
     local function fetchPage(cursor)
         local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -103,7 +75,7 @@ local function serverHop()
         task.wait(0.05)
     end
     if #candidates == 0 then
-        warn("[McDonald’s] Nem találtam majdnem full szervert. Fallback teleport...")
+        warn("[NebulaHub] Nem találtam majdnem full szervert. Fallback teleport...")
         pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
         return
     end
@@ -119,7 +91,7 @@ end
 local function createGui()
     local pg = LocalPlayer:WaitForChild("PlayerGui")
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MCDONALDS_GUI"
+    screenGui.Name = "NebulaHub_GUI"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.Parent = pg
@@ -128,7 +100,7 @@ local function createGui()
     smallBtn.Size = UDim2.new(0, 40, 0, 40)
     smallBtn.Position = UDim2.new(0, 10, 0, 100)
     smallBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    smallBtn.Text = "🍔"
+    smallBtn.Text = "NH"
     smallBtn.BorderSizePixel = 0
     smallBtn.AutoButtonColor = true
     smallBtn.ZIndex = 10
@@ -147,7 +119,7 @@ local function createGui()
 
     local title = Instance.new("TextLabel", mainFrame)
     title.Size = UDim2.new(1,0,0,60)
-    title.Text = "🍟 McDonald’s"
+    title.Text = "NebulaHub"
     title.TextColor3 = Color3.fromRGB(0, 200, 255)
     title.Font = Enum.Font.GothamBold
     title.TextScaled = true
@@ -174,10 +146,10 @@ local function createGui()
         end)
     end
 
-    makeButton("🦘 Infinite Jump", 70, "infiniteJump")
-    makeButton("🧱 Auto Floor", 140, "autoFloor")
-    makeButton("👀 ESP Players", 210, "esp")
-    makeButton("🌐 Server Hop", 280, nil, serverHop)
+    makeButton("Infinite Jump", 70, "infiniteJump")
+    makeButton("Auto Floor", 140, "autoFloor")
+    makeButton("ESP Players", 210, "esp")
+    makeButton("Server Hop", 280, nil, serverHop)
 
     smallBtn.MouseButton1Click:Connect(function()
         mainFrame.Visible = not mainFrame.Visible
@@ -218,7 +190,6 @@ end)
 local function clearESP()
     for _, stuff in pairs(espObjects) do
         if stuff.highlight then pcall(function() stuff.highlight:Destroy() end) end
-        if stuff.billboard then pcall(function() stuff.billboard:Destroy() end) end
     end
     espObjects = {}
 end
@@ -230,27 +201,13 @@ local function applyESP()
             local char = player.Character
             local highlight = Instance.new("Highlight")
             highlight.Adornee = char
-            highlight.FillTransparency = 0.6
-            highlight.OutlineColor = Color3.fromRGB(255,255,0)
-            highlight.FillColor = Color3.fromRGB(0,170,255)
+            highlight.FillTransparency = 0
+            highlight.OutlineTransparency = 0
+            highlight.OutlineColor = Color3.fromRGB(255,0,0)
+            highlight.FillColor = Color3.fromRGB(255,0,0)
             highlight.Parent = char
 
-            local billboard = Instance.new("BillboardGui")
-            billboard.Size = UDim2.new(0, 200, 0, 50)
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.AlwaysOnTop = true
-            billboard.Adornee = char:FindFirstChild("Head")
-            billboard.Parent = char
-
-            local label = Instance.new("TextLabel", billboard)
-            label.Size = UDim2.new(1,0,1,0)
-            label.BackgroundTransparency = 1
-            label.Text = "👀 " .. player.Name
-            label.TextColor3 = Color3.new(1,1,1)
-            label.Font = Enum.Font.GothamBold
-            label.TextScaled = true
-
-            espObjects[player] = {highlight = highlight, billboard = billboard}
+            espObjects[player] = {highlight = highlight}
         end
     end
 end
@@ -289,4 +246,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop, Discord Banner")
+print("[NebulaHub] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop")
