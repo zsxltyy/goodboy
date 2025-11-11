@@ -290,5 +290,3 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop, Discord Banner")
-message.txt
-12 KB
