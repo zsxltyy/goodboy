@@ -1,5 +1,5 @@
 -- ======================================================
--- McDonald’s: Infinite Jump + AutoFloor/ESP + ServerHop
+-- McDonald’s: Infinite Jump + AutoFloor/ESP + ServerHop + Discord Banner (PERMANENT)
 -- ======================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -18,7 +18,38 @@ if _G.MCDONALDS_LOADED then
 end
 _G.MCDONALDS_LOADED = true
 
--- Clean old GUI
+-- ======================================================
+-- 💬 Discord Banner a képernyő tetejére (ÁLLANDÓ)
+-- ======================================================
+pcall(function()
+    local pg = LocalPlayer:WaitForChild("PlayerGui")
+
+    local banner = Instance.new("ScreenGui")
+    banner.Name = "DiscordBanner"
+    banner.IgnoreGuiInset = true
+    banner.ResetOnSpawn = false
+    banner.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    banner.Parent = pg
+
+    local text = Instance.new("TextLabel", banner)
+    text.Size = UDim2.new(1, 0, 0, 60)
+    text.Position = UDim2.new(0, 0, 0, 0)
+    text.BackgroundTransparency = 0.3
+    text.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    text.Text = "discord.gg/HRbdkSnzHe"
+    text.TextColor3 = Color3.fromRGB(0, 255, 255)
+    text.Font = Enum.Font.GothamBold
+    text.TextScaled = true
+    text.TextStrokeTransparency = 0.3
+    text.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    text.ZIndex = 9999
+
+    Instance.new("UICorner", text).CornerRadius = UDim.new(0, 10)
+end)
+
+-- ======================================================
+-- GUI törlés, globális beállítások
+-- ======================================================
 pcall(function()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
@@ -27,17 +58,12 @@ pcall(function()
     end
 end)
 
--- Toggles
 local toggles = { infiniteJump = false, autoFloor = false, esp = false }
-
--- Globals
 local currentRoot, currentHumanoid, activeBlock = nil, nil, nil
 local jumpPressed = false
 local espObjects = {}
 local PLATFORM_SIZE = Vector3.new(6,0.2,6)
 local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
-
--- Save WalkSpeed & JumpPower for new spawns
 local walkSpeedValue = 16
 local jumpPowerValue = 50
 local gravityValue = workspace.Gravity
@@ -88,31 +114,27 @@ local function serverHop()
 end
 
 -- ======================================================
--- GUI
+-- GUI létrehozás
 -- ======================================================
 local function createGui()
     local pg = LocalPlayer:WaitForChild("PlayerGui")
-
-    -- ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MCDONALDS_GUI"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.Parent = pg
 
-    -- Small red dot
     local smallBtn = Instance.new("TextButton", screenGui)
     smallBtn.Size = UDim2.new(0, 40, 0, 40)
     smallBtn.Position = UDim2.new(0, 10, 0, 100)
     smallBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    smallBtn.Text = ""
+    smallBtn.Text = "🍔"
     smallBtn.BorderSizePixel = 0
     smallBtn.AutoButtonColor = true
     smallBtn.ZIndex = 10
     Instance.new("UICorner", smallBtn).CornerRadius = UDim.new(0, 20)
     smallBtn.Draggable = true
 
-    -- Main Frame
     local mainFrame = Instance.new("Frame", screenGui)
     mainFrame.Size = UDim2.new(0, 260, 0, 400)
     mainFrame.Position = UDim2.new(0, 50, 0.5, -200)
@@ -125,12 +147,12 @@ local function createGui()
 
     local title = Instance.new("TextLabel", mainFrame)
     title.Size = UDim2.new(1,0,0,60)
-    title.Text = "McDonald’s"
+    title.Text = "🍟 McDonald’s"
     title.TextColor3 = Color3.fromRGB(0, 200, 255)
     title.Font = Enum.Font.GothamBold
     title.TextScaled = true
+    title.BackgroundTransparency = 1
 
-    -- Function to create buttons
     local function makeButton(text, y, key, callback)
         local btn = Instance.new("TextButton", mainFrame)
         btn.Size = UDim2.new(1,-40,0,50)
@@ -150,15 +172,13 @@ local function createGui()
                 callback()
             end
         end)
-        return btn
     end
 
-    makeButton("Infinite Jump", 70, "infiniteJump")
-    makeButton("Auto Floor", 140, "autoFloor")
-    makeButton("ESP Players", 210, "esp")
-    makeButton("Server Hop", 280, nil, serverHop)
+    makeButton("🦘 Infinite Jump", 70, "infiniteJump")
+    makeButton("🧱 Auto Floor", 140, "autoFloor")
+    makeButton("👀 ESP Players", 210, "esp")
+    makeButton("🌐 Server Hop", 280, nil, serverHop)
 
-    -- Toggle logic small red button
     smallBtn.MouseButton1Click:Connect(function()
         mainFrame.Visible = not mainFrame.Visible
     end)
@@ -172,19 +192,15 @@ createGui()
 local function onCharacterAdded(char)
     currentHumanoid = char:WaitForChild("Humanoid")
     currentRoot = char:WaitForChild("HumanoidRootPart")
-
-    -- Apply saved values
     if currentHumanoid then
         currentHumanoid.WalkSpeed = walkSpeedValue
         currentHumanoid.JumpPower = jumpPowerValue
     end
-
     if activeBlock then
         pcall(function() activeBlock:Destroy() end)
         activeBlock = nil
     end
 end
-
 if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
@@ -192,7 +208,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = true end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Space then jumpPressed = false end
 end)
@@ -230,7 +245,7 @@ local function applyESP()
             local label = Instance.new("TextLabel", billboard)
             label.Size = UDim2.new(1,0,1,0)
             label.BackgroundTransparency = 1
-            label.Text = player.Name
+            label.Text = "👀 " .. player.Name
             label.TextColor3 = Color3.new(1,1,1)
             label.Font = Enum.Font.GothamBold
             label.TextScaled = true
@@ -274,4 +289,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop")
+print("[McDonald’s] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop, Discord Banner")
