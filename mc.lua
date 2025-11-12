@@ -1,8 +1,112 @@
 -- ======================================================
--- NebulaHub: Infinite Jump + AutoFloor + ServerHop + ESP
+-- Key GUI
 -- ======================================================
-
+local LINKVERTISE_LINK = "https://linkvertise.com/1443607/JNXqZHX147qx?o=sharing"
+local CORRECT_KEY = "10ko57cl69"
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+local function keyGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "KeyLinkGUI"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.ResetOnSpawn = false
+
+    local frame = Instance.new("Frame", screenGui)
+    frame.Size = UDim2.new(0, 400, 0, 220)
+    frame.Position = UDim2.new(0.5, -200, 0.5, -110)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    frame.BorderSizePixel = 0
+    frame.Active = true
+    frame.Draggable = true
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,20)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1,0,0,50)
+    title.Position = UDim2.new(0,0,0,0)
+    title.Text = "NebulaHub Key System"
+    title.TextColor3 = Color3.fromRGB(0, 200, 255)
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.BackgroundTransparency = 1
+
+    local linkBtn = Instance.new("TextButton", frame)
+    linkBtn.Size = UDim2.new(0.8,0,0,50)
+    linkBtn.Position = UDim2.new(0.1,0,0.3,0)
+    linkBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    linkBtn.TextColor3 = Color3.new(1,1,1)
+    linkBtn.Font = Enum.Font.GothamBold
+    linkBtn.TextScaled = true
+    linkBtn.Text = "Copy Link"
+    local linkCorner = Instance.new("UICorner", linkBtn)
+    linkCorner.CornerRadius = UDim.new(0,12)
+
+    -- Hover effect
+    linkBtn.MouseEnter:Connect(function()
+        TweenService:Create(linkBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 220, 255)}):Play()
+    end)
+    linkBtn.MouseLeave:Connect(function()
+        TweenService:Create(linkBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 170, 255)}):Play()
+    end)
+
+    linkBtn.MouseButton1Click:Connect(function()
+        if setclipboard then setclipboard(LINKVERTISE_LINK) end
+        linkBtn.Text = "Copied!"
+        task.wait(1)
+        linkBtn.Text = "Copy Link"
+    end)
+
+    local textbox = Instance.new("TextBox", frame)
+    textbox.Size = UDim2.new(0.8,0,0,50)
+    textbox.Position = UDim2.new(0.1,0,0.55,0)
+    textbox.PlaceholderText = "Enter key here"
+    textbox.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    textbox.TextColor3 = Color3.new(1,1,1)
+    textbox.Font = Enum.Font.Gotham
+    textbox.TextScaled = true
+    local boxCorner = Instance.new("UICorner", textbox)
+    boxCorner.CornerRadius = UDim.new(0,12)
+
+    local submitBtn = Instance.new("TextButton", frame)
+    submitBtn.Size = UDim2.new(0.6,0,0,45)
+    submitBtn.Position = UDim2.new(0.2,0,0.8,0)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
+    submitBtn.TextColor3 = Color3.new(1,1,1)
+    submitBtn.Font = Enum.Font.GothamBold
+    submitBtn.TextScaled = true
+    submitBtn.Text = "Submit"
+    local submitCorner = Instance.new("UICorner", submitBtn)
+    submitCorner.CornerRadius = UDim.new(0,12)
+
+    local success = false
+    submitBtn.MouseButton1Click:Connect(function()
+        if textbox.Text == CORRECT_KEY then
+            success = true
+            TweenService:Create(frame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+            task.wait(0.5)
+            screenGui:Destroy()
+        else
+            textbox.Text = ""
+            textbox.PlaceholderText = "Incorrect key!"
+            -- Shake animation
+            for i = 1, 3 do
+                TweenService:Create(frame, TweenInfo.new(0.05), {Position = frame.Position + UDim2.new(0.02,0,0,0)}):Play()
+                task.wait(0.05)
+                TweenService:Create(frame, TweenInfo.new(0.05), {Position = frame.Position - UDim2.new(0.02,0,0,0)}):Play()
+                task.wait(0.05)
+            end
+        end
+    end)
+
+    repeat task.wait() until success
+end
+
+keyGui()
+
+-- ======================================================
+-- NebulaHub Main Script
+-- ======================================================
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -10,18 +114,14 @@ local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
-local LocalPlayer = Players.LocalPlayer
-
--- Prevent double load
+-- Double load prevention
 if _G.NEBULAHUB_LOADED then
     warn("[NebulaHub] Már fut egy példány. Kilépés.")
     return
 end
 _G.NEBULAHUB_LOADED = true
 
--- ======================================================
--- GUI törlés, globális beállítások
--- ======================================================
+-- GUI cleanup
 pcall(function()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
@@ -30,18 +130,19 @@ pcall(function()
     end
 end)
 
+-- ======================================================
+-- Variables
+-- ======================================================
 local toggles = { infiniteJump = false, autoFloor = false, esp = false }
 local currentRoot, currentHumanoid, activeBlock = nil, nil, nil
 local jumpPressed = false
 local espObjects = {}
 local PLATFORM_SIZE = Vector3.new(6,0.2,6)
 local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
-local walkSpeedValue = 16
-local jumpPowerValue = 50
-local gravityValue = workspace.Gravity
+local autoFrame, toggleBtn
 
 -- ======================================================
--- ServerHop
+-- ServerHop Function
 -- ======================================================
 local function serverHop()
     print("[NebulaHub] Precise ServerHop indítva...")
@@ -86,7 +187,7 @@ local function serverHop()
 end
 
 -- ======================================================
--- GUI létrehozás
+-- GUI Creation
 -- ======================================================
 local function createGui()
     local pg = LocalPlayer:WaitForChild("PlayerGui")
@@ -102,7 +203,6 @@ local function createGui()
     smallBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
     smallBtn.Text = "NH"
     smallBtn.BorderSizePixel = 0
-    smallBtn.AutoButtonColor = true
     smallBtn.ZIndex = 10
     Instance.new("UICorner", smallBtn).CornerRadius = UDim.new(0, 20)
     smallBtn.Draggable = true
@@ -125,6 +225,65 @@ local function createGui()
     title.TextScaled = true
     title.BackgroundTransparency = 1
 
+    -- ======================================================
+    -- AutoFloor Popup (Draggable)
+    -- ======================================================
+    autoFrame = Instance.new("Frame", screenGui)
+    autoFrame.Size = UDim2.new(0, 220, 0, 150)
+    autoFrame.Position = UDim2.new(0.5, -110, 0.5, -75)
+    autoFrame.BackgroundColor3 = Color3.fromRGB(25,25,35)
+    autoFrame.BorderSizePixel = 0
+    autoFrame.Visible = false
+    autoFrame.Active = true
+    autoFrame.Draggable = true
+    Instance.new("UICorner", autoFrame).CornerRadius = UDim.new(0,12)
+
+    local autoTitle = Instance.new("TextLabel", autoFrame)
+    autoTitle.Size = UDim2.new(1,0,0,40)
+    autoTitle.Text = "Auto Floor Settings"
+    autoTitle.TextColor3 = Color3.fromRGB(0,200,255)
+    autoTitle.Font = Enum.Font.GothamBold
+    autoTitle.TextScaled = true
+    autoTitle.BackgroundTransparency = 1
+
+    toggleBtn = Instance.new("TextButton", autoFrame)
+    toggleBtn.Size = UDim2.new(0.8,0,0,40)
+    toggleBtn.Position = UDim2.new(0.1,0,0.45,0)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    toggleBtn.Text = "Enable Auto Floor: OFF"
+    toggleBtn.TextColor3 = Color3.new(1,1,1)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextScaled = true
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,10)
+
+    local function updateAutoButton()
+        TweenService:Create(toggleBtn, TweenInfo.new(0.3), {
+            BackgroundColor3 = toggles.autoFloor and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50)
+        }):Play()
+        toggleBtn.Text = "Enable Auto Floor: " .. (toggles.autoFloor and "ON" or "OFF")
+    end
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        toggles.autoFloor = not toggles.autoFloor
+        updateAutoButton()
+    end)
+
+    local closeBtn = Instance.new("TextButton", autoFrame)
+    closeBtn.Size = UDim2.new(0.3,0,0,30)
+    closeBtn.Position = UDim2.new(0.35,0,0.8,0)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255,60,60)
+    closeBtn.Text = "Close"
+    closeBtn.TextColor3 = Color3.new(1,1,1)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextScaled = true
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0,8)
+    closeBtn.MouseButton1Click:Connect(function()
+        autoFrame.Visible = false
+    end)
+
+    -- ======================================================
+    -- Button Factory
+    -- ======================================================
     local function makeButton(text, y, key, callback)
         local btn = Instance.new("TextButton", mainFrame)
         btn.Size = UDim2.new(1,-40,0,50)
@@ -137,9 +296,13 @@ local function createGui()
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
         if key and toggles[key] then btn.BackgroundColor3 = Color3.fromRGB(0,170,90) end
         btn.MouseButton1Click:Connect(function()
-            if key then
+            if text == "Auto Floor" then
+                autoFrame.Visible = true
+            elseif key then
                 toggles[key] = not toggles[key]
-                TweenService:Create(btn, TweenInfo.new(0.3), { BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50) }):Play()
+                TweenService:Create(btn, TweenInfo.new(0.3), {
+                    BackgroundColor3 = toggles[key] and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50)
+                }):Play()
             elseif callback then
                 callback()
             end
@@ -164,24 +327,29 @@ createGui()
 local function onCharacterAdded(char)
     currentHumanoid = char:WaitForChild("Humanoid")
     currentRoot = char:WaitForChild("HumanoidRootPart")
-    if currentHumanoid then
-        currentHumanoid.WalkSpeed = walkSpeedValue
-        currentHumanoid.JumpPower = jumpPowerValue
-    end
-    if activeBlock then
-        pcall(function() activeBlock:Destroy() end)
-        activeBlock = nil
-    end
 end
 if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.Space then jumpPressed = true end
+    if input.KeyCode == Enum.KeyCode.Space then
+        jumpPressed = true
+    elseif input.KeyCode == Enum.KeyCode.G then
+        toggles.autoFloor = not toggles.autoFloor
+        if toggleBtn then
+            TweenService:Create(toggleBtn, TweenInfo.new(0.3), {
+                BackgroundColor3 = toggles.autoFloor and Color3.fromRGB(0,170,90) or Color3.fromRGB(40,40,50)
+            }):Play()
+            toggleBtn.Text = "Enable Auto Floor: " .. (toggles.autoFloor and "ON" or "OFF")
+        end
+    end
 end)
+
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Space then jumpPressed = false end
+    if input.KeyCode == Enum.KeyCode.Space then
+        jumpPressed = false
+    end
 end)
 
 -- ======================================================
@@ -198,15 +366,12 @@ local function applyESP()
     clearESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-            local char = player.Character
             local highlight = Instance.new("Highlight")
-            highlight.Adornee = char
-            highlight.FillTransparency = 0
-            highlight.OutlineTransparency = 0
-            highlight.OutlineColor = Color3.fromRGB(255,0,0)
+            highlight.Adornee = player.Character
+            highlight.FillTransparency = 0.5
             highlight.FillColor = Color3.fromRGB(255,0,0)
-            highlight.Parent = char
-
+            highlight.OutlineColor = Color3.fromRGB(255,0,0)
+            highlight.Parent = player.Character
             espObjects[player] = {highlight = highlight}
         end
     end
@@ -216,7 +381,7 @@ end
 -- Update Loop
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    if toggles.infiniteJump and jumpPressed and currentHumanoid and currentRoot then
+    if toggles.infiniteJump and jumpPressed and currentRoot then
         currentRoot.Velocity = Vector3.new(currentRoot.Velocity.X, 50, currentRoot.Velocity.Z)
     end
 
@@ -235,7 +400,7 @@ RunService.RenderStepped:Connect(function()
             activeBlock.Position = currentRoot.Position - Vector3.new(0, hum.HipHeight + activeBlock.Size.Y/2, 0)
         end
     elseif activeBlock then
-        pcall(function() activeBlock:Destroy() end)
+        activeBlock:Destroy()
         activeBlock = nil
     end
 
@@ -245,5 +410,3 @@ RunService.RenderStepped:Connect(function()
         clearESP()
     end
 end)
-
-print("[NebulaHub] Loaded: Infinite Jump, AutoFloor, ESP, ServerHop")
