@@ -182,7 +182,7 @@ T2.Font = Enum.Font.GothamBold
 T2.TextSize = 20
 T2.TextXAlignment = Enum.TextXAlignment.Left
 T2.TextColor3 = Color3.fromRGB(200,200,200)
-T2.Text = "Hub Premium"
+
 
 ----------------------------------------------------
 -- BUTTON SCROLL FRAME
