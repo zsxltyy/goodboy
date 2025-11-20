@@ -17,15 +17,30 @@ local TeleportService = game:GetService("TeleportService")
 local WHITELIST_URL = "https://raw.githubusercontent.com/zsxItyy/goodboy/main/validKeys.json"
 
 local function getWhitelist()
+    -- Get whitelist data from GitHub
     local success, response = pcall(function()
         return HttpService:GetAsync(WHITELIST_URL)
     end)
 
     if success then
-        local whitelistData = HttpService:JSONDecode(response)
-        return whitelistData.whitelisted_users
+        local whitelistData
+        -- Try to decode the JSON data
+        local successDecode, data = pcall(function()
+            return HttpService:JSONDecode(response)
+        end)
+
+        -- Check if decoding was successful
+        if successDecode then
+            whitelistData = data.whitelisted_users
+        else
+            warn("Failed to decode whitelist JSON.")
+            return {}
+        end
+
+        -- Return the list of whitelisted users
+        return whitelistData
     else
-        warn("Hiba történt a whitelist lekérésekor.")
+        warn("Failed to fetch whitelist from GitHub.")
         return {}
     end
 end
@@ -33,6 +48,7 @@ end
 local function isPlayerWhitelisted(player)
     local whitelist = getWhitelist()
 
+    -- Check if player's name is in the whitelist
     for _, username in ipairs(whitelist) do
         if player.Name == username then
             return true
@@ -44,6 +60,7 @@ end
 if not isPlayerWhitelisted(LocalPlayer) then
     warn("[NebulaHub] Not whitelisted:", LocalPlayer.Name)
 
+    -- Show an error GUI and kick the player
     local gui = Instance.new("ScreenGui", game.CoreGui)
     local frame = Instance.new("Frame", gui)
     frame.Size = UDim2.new(0,350,0,160)
@@ -289,7 +306,7 @@ local function makeButton(name, callback)
 end
 
 ----------------------------------------------------
--- START OF FUNCTION LOGIC
+-- FUNCTION LOGIC
 ----------------------------------------------------
 local toggles = {
     infiniteJump = false,
@@ -305,7 +322,7 @@ local PLATFORM_SIZE = Vector3.new(6,0.2,6)
 local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
 
 ----------------------------------------------------
--- FUNCTION: ESP
+-- ESP FUNCTION
 ----------------------------------------------------
 local function clearESP()
     for _, set in pairs(espObjects) do
@@ -334,7 +351,7 @@ local function applyESP()
 end
 
 ----------------------------------------------------
--- FUNCTION: SERVER HOP
+-- SERVER HOP
 ----------------------------------------------------
 local function serverHop()
     local placeId = tostring(game.PlaceId)
@@ -387,7 +404,7 @@ local function serverHop()
 end
 
 ----------------------------------------------------
--- MAIN PANEL BUTTONS (REPLACE SLOT BUTTONS HERE)
+-- BUTTONS
 ----------------------------------------------------
 makeButton("Infinite Jump", function(state)
     toggles.infiniteJump = state
