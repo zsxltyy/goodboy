@@ -1,5 +1,5 @@
 --========================================================
---  NEBULAHUB – SAFE GUI WITH FUNCTIONS
+--  NEBULAHUB – SAFE GUI WITH FUNCTIONS + DISCORD BUTTON
 --========================================================
 
 local Players = game:GetService("Players")
@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
+local setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
 
 ----------------------------------------------------
 -- SCREEN GUI
@@ -103,7 +104,7 @@ task.wait(3)
 LoadingFrame:Destroy()
 
 ----------------------------------------------------
--- ROUND OPEN BUTTON
+-- OPEN BUTTON
 ----------------------------------------------------
 local CircleBtn = Instance.new("ImageButton", ScreenGui)
 CircleBtn.Size = UDim2.new(0,60,0,60)
@@ -127,10 +128,10 @@ task.spawn(function()
 end)
 
 ----------------------------------------------------
--- MAIN HUB WINDOW
+-- MAIN HUB
 ----------------------------------------------------
 local MainHub = Instance.new("Frame", ScreenGui)
-MainHub.Size = UDim2.new(0,260,0,350)
+MainHub.Size = UDim2.new(0,260,0,370)
 MainHub.Position = UDim2.new(0.5,-130,0.5,-175)
 MainHub.BackgroundColor3 = Color3.fromRGB(30,30,30)
 MainHub.Visible = false
@@ -147,7 +148,7 @@ CircleBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------
--- TOP BAR
+-- TITLE
 ----------------------------------------------------
 local Top = Instance.new("Frame", MainHub)
 Top.Size = UDim2.new(1,0,0,60)
@@ -161,31 +162,18 @@ Icon.BackgroundTransparency = 1
 Icon.Image = "rbxassetid://73373521013315"
 Instance.new("UICorner", Icon).CornerRadius = UDim.new(1,0)
 
-local TitleFrame = Instance.new("Frame", Top)
-TitleFrame.Size = UDim2.new(1,-60,1,0)
-TitleFrame.Position = UDim2.new(0,55,0,0)
-TitleFrame.BackgroundTransparency = 1
-
-local T1 = Instance.new("TextLabel", TitleFrame)
-T1.Size = UDim2.new(1,0,0.5,0)
-T1.BackgroundTransparency = 1
-T1.Font = Enum.Font.GothamBlack
-T1.TextSize = 26
-T1.TextXAlignment = Enum.TextXAlignment.Left
-T1.Text = "Nebula"
-
-local T2 = Instance.new("TextLabel", TitleFrame)
-T2.Size = UDim2.new(1,0,0.5,0)
-T2.Position = UDim2.new(0,0,0.5,0)
-T2.BackgroundTransparency = 1
-T2.Font = Enum.Font.GothamBold
-T2.TextSize = 20
-T2.TextXAlignment = Enum.TextXAlignment.Left
-T2.TextColor3 = Color3.fromRGB(200,200,200)
-
+local TitleLabel = Instance.new("TextLabel", Top)
+TitleLabel.Size = UDim2.new(1,-60,1,0)
+TitleLabel.Position = UDim2.new(0,55,0,0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 24
+TitleLabel.TextColor3 = Color3.fromRGB(255,255,255)
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Text = "NebulaHub"
 
 ----------------------------------------------------
--- BUTTON SCROLL FRAME
+-- SCROLL FRAME
 ----------------------------------------------------
 local Scroll = Instance.new("ScrollingFrame", MainHub)
 Scroll.Size = UDim2.new(1,-20,1,-65)
@@ -200,12 +188,10 @@ Layout.Padding = UDim.new(0,5)
 local function updateCanvas()
     Scroll.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y)
 end
-
-Layout:GetPropertyChangedSignal("AbsoluteContentSize")
-    :Connect(updateCanvas)
+Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 
 ----------------------------------------------------
--- BUTTON MAKER (ANIMATED)
+-- BUTTON MAKER
 ----------------------------------------------------
 local function makeButton(name, callback)
     local btn = Instance.new("TextButton", Scroll)
@@ -215,120 +201,65 @@ local function makeButton(name, callback)
     btn.Text = name
     btn.TextColor3 = Color3.new(0,0,0)
     btn.TextScaled = true
-
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
 
     local active = false
-
     btn.MouseButton1Click:Connect(function()
         active = not active
-
-        TweenService:Create(
-            btn,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quad),
-            {BackgroundColor3 = active and Color3.fromRGB(0,255,0)
-                or Color3.fromRGB(255,40,255)}
-        ):Play()
-
+        TweenService:Create(btn, TweenInfo.new(0.4), {BackgroundColor3 = active and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,40,255)}):Play()
         callback(active)
     end)
 end
 
 ----------------------------------------------------
--- FUNCTION LOGIC
+-- FUNCTIONS
 ----------------------------------------------------
-local toggles = {
-    infiniteJump = false,
-    autoFloor = false,
-    esp = false
-}
-
+local toggles = {infiniteJump=false, autoFloor=false, esp=false}
 local currentRoot, currentHumanoid
 local jumpPressed = false
-local activeBlock = nil
-local espObjects = {}
+local activeBlock, espObjects = nil, {}
 local PLATFORM_SIZE = Vector3.new(6,0.2,6)
 local PLATFORM_COLOR = Color3.fromRGB(200,150,255)
 
-----------------------------------------------------
--- ESP FUNCTION
-----------------------------------------------------
+-- ESP
 local function clearESP()
-    for _, set in pairs(espObjects) do
-        if set.highlight then
-            set.highlight:Destroy()
-        end
-    end
+    for _, v in pairs(espObjects) do if v.highlight then v.highlight:Destroy() end end
     espObjects = {}
 end
 
 local function applyESP()
     clearESP()
-
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local highlight = Instance.new("Highlight")
             highlight.Adornee = plr.Character
             highlight.FillTransparency = 0.5
             highlight.FillColor = Color3.fromRGB(255,0,0)
-            highlight.OutlineColor = Color3.fromRGB(255,0,0)
             highlight.Parent = plr.Character
-
-            espObjects[plr] = {highlight = highlight}
+            espObjects[plr] = {highlight=highlight}
         end
     end
 end
 
-----------------------------------------------------
--- SERVER HOP
-----------------------------------------------------
+-- Server Hop
 local function serverHop()
-    local placeId = tostring(game.PlaceId)
-    local currentJob = tostring(game.JobId)
-
-    local function fetch(cursor)
-        local url = "https://games.roblox.com/v1/games/"..placeId.."/servers/Public?sortOrder=Asc&limit=100"
-        if cursor then
-            url = url .. "&cursor="..HttpService:UrlEncode(cursor)
-        end
-
-        local ok, body = pcall(function()
-            return game:HttpGet(url)
-        end)
-        if not ok then return end
-
-        local ok2, data = pcall(function()
-            return HttpService:JSONDecode(body)
-        end)
-
-        if ok2 then return data end
-    end
-
+    local placeId = game.PlaceId
+    local currentJob = game.JobId
     local servers = {}
-    local cursor = nil
-
-    for _ = 1,5 do
-        local data = fetch(cursor)
-        if not data then break end
-
-        for _, srv in ipairs(data.data) do
-            if srv.id ~= currentJob and srv.playing < srv.maxPlayers then
-                table.insert(servers, srv.id)
-            end
-        end
-
-        cursor = data.nextPageCursor
-        if not cursor then break end
+    local function fetch(cursor)
+        local url = "https://games.roblox.com/v1/games/"..placeId.."/servers/Public?sortOrder=Asc&limit=100"..(cursor and "&cursor="..HttpService:UrlEncode(cursor) or "")
+        local body = game:HttpGet(url)
+        local data = HttpService:JSONDecode(body)
+        return data
     end
-
-    if #servers == 0 then
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    else
-        TeleportService:TeleportToPlaceInstance(
-            game.PlaceId,
-            servers[math.random(1, #servers)],
-            LocalPlayer
-        )
+    local data = fetch(nil)
+    for _, srv in ipairs(data.data) do
+        if srv.id ~= currentJob and srv.playing < srv.maxPlayers then
+            table.insert(servers, srv.id)
+        end
+    end
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(placeId, servers[math.random(1,#servers)], LocalPlayer)
     end
 end
 
@@ -345,64 +276,62 @@ end)
 
 makeButton("ESP Players", function(state)
     toggles.esp = state
-    if state then
-        applyESP()
-    else
-        clearESP()
-    end
+    if state then applyESP() else clearESP() end
 end)
 
 makeButton("Server Hop", function()
     serverHop()
 end)
 
+-- ✨ DISCORD BUTTON ✨
+makeButton("DISCORD", function()
+    local link = "https://discord.gg/nsWY4CRj5A"
+    if setclipboard then
+        setclipboard(link)
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "NebulaHub";
+            Text = "Discord link copied to clipboard!";
+            Duration = 3;
+        })
+    else
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "NebulaHub";
+            Text = "Clipboard not supported!";
+            Duration = 3;
+        })
+    end
+end)
+
 ----------------------------------------------------
--- CHARACTER TRACKING
+-- CHARACTER
 ----------------------------------------------------
 local function onCharacterAdded(char)
     currentHumanoid = char:WaitForChild("Humanoid")
     currentRoot = char:WaitForChild("HumanoidRootPart")
 end
-
-if LocalPlayer.Character then
-    onCharacterAdded(LocalPlayer.Character)
-end
-
+if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
 ----------------------------------------------------
--- INPUT HANDLER
+-- INPUTS
 ----------------------------------------------------
 UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
-
-    if input.KeyCode == Enum.KeyCode.Space then
-        jumpPressed = true
-    end
+    if input.KeyCode == Enum.KeyCode.Space then jumpPressed = true end
 end)
-
 UIS.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Space then
-        jumpPressed = false
-    end
+    if input.KeyCode == Enum.KeyCode.Space then jumpPressed = false end
 end)
 
 ----------------------------------------------------
--- MAIN LOOP
+-- LOOP
 ----------------------------------------------------
 local lastESP = false
-
 RunService.RenderStepped:Connect(function()
-    -- INFINITE JUMP
     if toggles.infiniteJump and jumpPressed and currentRoot then
-        currentRoot.Velocity = Vector3.new(
-            currentRoot.Velocity.X,
-            50,
-            currentRoot.Velocity.Z
-        )
+        currentRoot.Velocity = Vector3.new(currentRoot.Velocity.X,50,currentRoot.Velocity.Z)
     end
 
-    -- AUTO FLOOR
     if toggles.autoFloor and currentRoot and currentHumanoid then
         if not activeBlock or not activeBlock.Parent then
             activeBlock = Instance.new("Part")
@@ -413,24 +342,14 @@ RunService.RenderStepped:Connect(function()
             activeBlock.Color = PLATFORM_COLOR
             activeBlock.Parent = Workspace
         end
-
-        activeBlock.Position = currentRoot.Position - Vector3.new(
-            0,
-            currentHumanoid.HipHeight + activeBlock.Size.Y / 2,
-            0
-        )
+        activeBlock.Position = currentRoot.Position - Vector3.new(0,currentHumanoid.HipHeight + activeBlock.Size.Y/2,0)
     elseif activeBlock then
         activeBlock:Destroy()
         activeBlock = nil
     end
 
-    -- ESP AUTO REFRESH
     if toggles.esp ~= lastESP then
         lastESP = toggles.esp
-        if toggles.esp then
-            applyESP()
-        else
-            clearESP()
-        end
+        if toggles.esp then applyESP() else clearESP() end
     end
 end)
